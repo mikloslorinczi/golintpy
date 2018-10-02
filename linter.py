@@ -6,9 +6,15 @@ from operator import itemgetter
 import sqlite3
 import pandas as pd
 
+# Set up database
 conn = sqlite3.connect('issue.db')
 conn.row_factory = sqlite3.Row
 c = conn.cursor()
+
+linter_regex = {
+    "lll" : r"(?<=line is )(.*)(?= characters)",
+    "gocyclo" : r"(?<=complexity )(.*)(?= of)"
+}
 
 def close_and_exit(status):
     conn.commit()
@@ -20,11 +26,6 @@ def string_to_num(s):
         return int(s)
     except ValueError:
         return float(s)
-
-linter_regex = {
-    "lll" : r"(?<=line is )(.*)(?= characters)",
-    "gocyclo" : r"(?<=complexity )(.*)(?= of)"
-}
 
 def get_linter(line):
     match = re.findall(r"[a-z]+\)$", line)
@@ -61,7 +62,10 @@ def print_usage():
     print("\nLinter PY\n")
     print("Options")
     print("populate, p : Populate the issue.db")
-    print("all,      a : List all the issues")
+    print("list,     l : List all linters with issue counter")
+    print("package, pa : List all package with issue counter")
+    print("file,     f : List all file with issue counter")
+    print("li lintername : List all issue by lintername")
     close_and_exit(1)
 
 def populate_db():
@@ -83,10 +87,15 @@ def file_by_count():
     print(pd.read_sql_query("SELECT path, count(*) FROM issues GROUP BY path ORDER BY count(*) DESC", conn, index_col="path"))
 
 def files_by_linter(linter):
-    query = 'SELECT linter, package, path, row, value FROM issues WHERE linter = ? ORDER BY value DESC'
-    for row in c.execute(query, (linter,)):
-        print(row[0], row[1], row[2], row[3], row[4])
-    # print(pd.read_sql_query(query, conn, index_col="linter"))
+    if "verbose" in sys.argv:
+        query = 'SELECT linter, package, path, row, value, line FROM issues WHERE linter = ? ORDER BY value DESC'
+        for row in c.execute(query, (linter,)):
+            print(row[0], row[1], row[2] + ":" +  str(row[3]), row[4])
+            print("\t" + row[5])
+    else:
+        query = 'SELECT linter, package, path, row, value FROM issues WHERE linter = ? ORDER BY value DESC'
+        for row in c.execute(query, (linter,)):
+            print(row[0], row[1], row[2] + ":" + str(row[3]), row[4])
 
 
 # Check argv and execute functions accordingly
@@ -95,16 +104,13 @@ if len(sys.argv) == 1:
 else:
     if sys.argv[1] in ["p", "-p", "pop", "populate"]:
         populate_db()
-    # if sys.argv[1] in ["a", "-a", "all"]:
-    #     list_all()
     if sys.argv[1] in ["l", "-l", "linters"]:
         linter_by_count()
     if sys.argv[1] in ["pa", "-pa", "package"]:
         package_by_count()
     if sys.argv[1] in ["f", "-f", "file"]:
         file_by_count()
-    if sys.argv[1] in ["li", "-fi"]:
+    if sys.argv[1] in ["li", "-li"]:
         files_by_linter(sys.argv[2])
-    
 
 close_and_exit(0)
