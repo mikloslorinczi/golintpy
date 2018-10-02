@@ -78,7 +78,7 @@ def populate_db():
     close_and_exit(0)
 
 def linter_by_count():
-    print(pd.read_sql_query("SELECT linter, count(*) FROM issues GROUP BY linter ORDER BY count(*)", conn, index_col="linter"))
+    print(pd.read_sql_query("SELECT linter, count(*) FROM issues GROUP BY linter ORDER BY count(*) DESC", conn, index_col="linter"))
 
 def package_by_count():
     print(pd.read_sql_query("SELECT package, count(*) FROM issues GROUP BY package ORDER BY count(*) DESC", conn, index_col="package"))
@@ -93,7 +93,7 @@ def files_by_linter(linter):
             print(row[0], row[1], row[2] + ":" +  str(row[3]), row[4])
             print("\t" + row[5])
     else:
-        query = 'SELECT linter, package, path, row, value FROM issues WHERE linter = ? ORDER BY value DESC'
+        query = 'SELECT linter, package, path, row, value FROM issues WHERE linter = ? ORDER BY value'
         for row in c.execute(query, (linter,)):
             print(row[0], row[1], row[2] + ":" + str(row[3]), row[4])
 
